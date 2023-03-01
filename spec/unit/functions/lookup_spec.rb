@@ -292,7 +292,14 @@ describe "The lookup function" do
           end
         end
 
-        context 'with missing variables' do
+        context 'with missing variables in the context of a compilation' do
+
+          around(:each) do |example|
+            Puppet.override(during_compilation: true) do
+              example.run
+            end
+          end
+
           let(:scope_additions) { { 'fqdn' => 'test.example.com' } }
           let(:hiera_yaml) { <<-YAML.unindent }
             version: 5
@@ -603,6 +610,12 @@ describe "The lookup function" do
 
       context 'using global variable reference' do
         let(:data_path) { 'x%{::var.sub}.yaml' }
+
+        around(:each) do |example|
+          Puppet.override(during_compilation: true) do
+            example.run
+          end
+        end
 
         it 'raises an error when reloads the configuration if interpolating undefined values' do
           collect_notices("notice('success')") do |scope|
@@ -2319,6 +2332,7 @@ describe "The lookup function" do
       end
 
       context 'using a data_hash that reads a yaml file' do
+
         let(:defaults) {
           {
             'mod_a::xd' => 'value mod_a::xd (from default)',
@@ -2423,7 +2437,6 @@ describe "The lookup function" do
         end
 
         it 'defaults are used when data is not found in scope interpolations' do
-          pending('See PUP-11751')
           expect(lookup('mod_a::interpolate_scope_xd', { 'default_values_hash' => defaults })).to eql('-- value scope_xd (from default) --')
         end
 
@@ -2461,9 +2474,9 @@ describe "The lookup function" do
           expect(lookup('mod_a::interpolate_scope')).to eql('-- scope scalar value --')
         end
 
-        it 'raises an error when trying to interpolate not found in scope' do
-          expect { lookup('mod_a::interpolate_scope_not_found') 
-          }.to raise_error(/Evaluation Error: Error while evaluating a Function Call, Undefined variable 'scope_nope';/)
+        it 'warns when trying to interpolate not found in scope' do
+          expect(Puppet).to receive(:warn_once)
+          expect(lookup('mod_a::interpolate_scope_not_found')).to eql('--  --')
         end
 
         it 'interpolates dotted key from scope' do

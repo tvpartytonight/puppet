@@ -531,11 +531,16 @@ class Puppet::Parser::Scope
       case Puppet[:strict]
       when :off
         # do nothing
-      when :warning
+      when :error
+        if Puppet.lookup(:during_compilation){false}
+          raise ArgumentError, _("Undefined variable '%{name}'; %{reason}") % { name: name, reason: reason }
+        else
+          Puppet.warn_once(UNDEFINED_VARIABLES_KIND, _("Variable: %{name}") % { name: name },
+          _("Undefined variable '%{name}' outside of compilation; %{reason}") % { name: name, reason: reason } )
+        end
+      else
         Puppet.warn_once(UNDEFINED_VARIABLES_KIND, _("Variable: %{name}") % { name: name },
         _("Undefined variable '%{name}'; %{reason}") % { name: name, reason: reason } )
-      when :error
-        raise ArgumentError, _("Undefined variable '%{name}'; %{reason}") % { name: name, reason: reason }
       end
     end
     nil
