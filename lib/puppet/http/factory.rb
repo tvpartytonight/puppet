@@ -17,7 +17,12 @@ class Puppet::HTTP::Factory
   def initialize
     # PUP-1411, make sure that openssl is initialized before we try to connect
     if ! @@openssl_initialized
-      OpenSSL::SSL::SSLContext.new
+      begin
+        Puppet.debug("The openssl ciphers are: #{OpenSSL::Cipher.ciphers}")
+        OpenSSL::SSL::SSLContext.new
+      rescue Exception => e
+        Puppet.debug("Exception class coming from openssl is: #{e.class}")
+      end
       @@openssl_initialized = true
     end
   end
